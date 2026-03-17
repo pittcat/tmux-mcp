@@ -13,6 +13,7 @@ Model Context Protocol server for interacting with tmux sessions over stateless 
 - Kill tmux sessions, windows, and panes
 - Shared HTTP MCP server supporting 50+ concurrent clients
 - Bounded command state storage with TTL cleanup
+- Automatic log rotation (hourly) with 4-hour retention
 
 ## Prerequisites
 
@@ -111,8 +112,11 @@ TMUX_MCP_MAX_COMMANDS=500 TMUX_MCP_COMMAND_TTL=300 cargo run --release
 # 查看状态
 launchctl list | grep tmux-mcp-server
 
-# 查看日志
+# 查看当前日志（按小时轮转）
 tail -f ~/.local/share/tmux-mcp/logs/server.log
+
+# 查看所有日志文件
+ls -la ~/.local/share/tmux-mcp/logs/
 
 # 重启服务
 launchctl stop com.pittcat.tmux-mcp-server
@@ -127,8 +131,11 @@ launchctl stop com.pittcat.tmux-mcp-server
 # 查看状态
 systemctl --user status tmux-mcp-server
 
-# 查看日志
-journalctl --user -u tmux-mcp-server -f
+# 查看当前日志（按小时轮转）
+tail -f ~/.local/share/tmux-mcp/logs/server.log
+
+# 查看所有日志文件
+ls -la ~/.local/share/tmux-mcp/logs/
 
 # 重启服务
 systemctl --user restart tmux-mcp-server
@@ -136,6 +143,13 @@ systemctl --user restart tmux-mcp-server
 # 停止服务
 systemctl --user stop tmux-mcp-server
 ```
+
+### Log Rotation
+
+日志自动按小时轮转，保留最近 4 小时的日志文件：
+- 日志目录：`~/.local/share/tmux-mcp/logs/`
+- 文件名格式：`server.log.YYYY-MM-DD-HH`
+- 自动清理：每 5 分钟检查一次，删除超过 4 小时的旧日志
 
 ### Environment Variables
 

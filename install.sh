@@ -185,10 +185,6 @@ Environment="TMUX_MCP_BIND_ADDR=$BIND_ADDR"
 Environment="TMUX_MCP_MAX_COMMANDS=$MAX_COMMANDS"
 Environment="TMUX_MCP_COMMAND_TTL=$COMMAND_TTL"
 
-# 日志输出到文件
-StandardOutput=append:$LOG_DIR/server.log
-StandardError=append:$LOG_DIR/server.log
-
 [Install]
 WantedBy=default.target
 EOF
@@ -245,13 +241,9 @@ setup_launchd_service() {
         <string>$MAX_COMMANDS</string>
         <key>TMUX_MCP_COMMAND_TTL</key>
         <string>$COMMAND_TTL</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
     </dict>
-
-    <key>StandardOutPath</key>
-    <string>$LOG_DIR/server.log</string>
-
-    <key>StandardErrorPath</key>
-    <string>$LOG_DIR/server.log</string>
 
     <key>KeepAlive</key>
     <true/>
