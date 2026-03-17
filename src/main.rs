@@ -20,48 +20,32 @@ mod state;
 mod tmux;
 mod transport;
 
-/// 启动日志清理任务，删除超过 4 小时的日志文件
-async fn start_log_cleanup_task(log_dir: PathBuf) {
+/// Start log truncation task, clears log file content periodically
+async fn start_log_cleanup_task(log_file: PathBuf) {
     tokio::spawn(async move {
-        let cleanup_interval = Duration::from_secs(300); // 每 5 分钟检查一次
-        let retention_duration = Duration::from_secs(4 * 3600); // 4 小时
+        let cleanup_interval = Duration::from_secs(3600); // Check every hour
+        let max_size = 10 * 1024 * 1024; // 10 MB size threshold
 
         loop {
             tokio::time::sleep(cleanup_interval).await;
 
-            if let Ok(entries) = tokio::fs::read_dir(&log_dir).await {
-                let mut entries = entries;
-                let now = std::time::SystemTime::now();
-
-                while let Ok(Some(entry)) = entries.next_entry().await {
-                    let path = entry.path();
-                    if path.extension().and_then(|s| s.to_str()) == Some("log") {
-                        match entry.metadata().await {
-                            Ok(metadata) => {
-                                if let Ok(modified) = metadata.modified() {
-                                    if let Ok(age) = now.duration_since(modified) {
-                                        if age > retention_duration {
-                                            if let Err(e) = tokio::fs::remove_file(&path).await {
-                                                tracing::warn!(
-                                                    "Failed to remove old log file {}: {}",
-                                                    path.display(),
-                                                    e
-                                                );
-                                            } else {
-                                                tracing::info!(
-                                                    "Removed old log file: {}",
-                                                    path.display()
-                                                );
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            Err(e) => {
-                                tracing::warn!("Failed to read metadata for {}: {}", path.display(), e);
-                            }
+            match tokio::fs::metadata(&log_file).await {
+                Ok(metadata) => {
+                    if metadata.len() > max_size {
+                        if let Err(e) = tokio::fs::OpenOptions::new()
+                            .write(true)
+                            .truncate(true)
+                            .open(&log_file)
+                            .await
+                        {
+                            tracing::warn!("Failed to truncate log file {}: {}", log_file.display(), e);
+                        } else {
+                            tracing::info!("Truncated log file: {}", log_file.display());
                         }
                     }
+                }
+                Err(e) => {
+                    tracing::debug!("Log file not found: {}: {}", log_file.display(), e);
                 }
             }
         }
@@ -70,7 +54,7 @@ async fn start_log_cleanup_task(log_dir: PathBuf) {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // 获取日志目录
+    // Get log directory
     let log_dir = dirs::data_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("tmux-mcp")
@@ -78,11 +62,12 @@ async fn main() -> anyhow::Result<()> {
 
     std::fs::create_dir_all(&log_dir)?;
 
-    // 使用 tracing-appender 实现按小时轮转
-    let file_appender = tracing_appender::rolling::hourly(&log_dir, "server.log");
+    // Use fixed log file (no rotation)
+    let log_file = log_dir.join("server.log");
+    let file_appender = tracing_appender::rolling::never(&log_dir, "server.log");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
 
-    // 同时输出到文件和控制台
+    // Output to both file and console
     let env_filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info"));
 
@@ -105,7 +90,7 @@ async fn main() -> anyhow::Result<()> {
         config.command_ttl_seconds,
     ));
 
-    // 启动命令清理任务
+    // Start command cleanup task
     tokio::spawn({
         let registry = command_registry.clone();
         async move {
@@ -117,8 +102,8 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    // 启动日志清理任务
-    start_log_cleanup_task(log_dir).await;
+    // Start log truncation task
+    start_log_cleanup_task(log_file).await;
 
     let app = create_router(command_registry);
 
@@ -132,7 +117,7 @@ async fn main() -> anyhow::Result<()> {
 
     info!("Server shutdown complete");
 
-    // 确保日志 guard 存活到程序结束，保证所有日志都被写入
+    // Ensure log guard lives until program end to flush all logs
     drop(_guard);
 
     Ok(())

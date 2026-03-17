@@ -1,72 +1,72 @@
 #!/bin/bash
 #
-# Tmux MCP Server 安装脚本
-# 支持源码构建和已有二进制两种安装方式
+# Tmux MCP Server Installation Script
+# Supports both source build and existing binary installation methods
 #
 
 set -e
 
-# 配置项
+# Configuration
 APP_NAME="tmux-mcp-server"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 CONFIG_DIR="${CONFIG_DIR:-$HOME/.config/tmux-mcp}"
 DATA_DIR="${DATA_DIR:-$HOME/.local/share/tmux-mcp}"
 LOG_DIR="${DATA_DIR}/logs"
 
-# 默认绑定地址
+# Default bind address
 BIND_ADDR="${TMUX_MCP_BIND_ADDR:-127.0.0.1:8090}"
 MAX_COMMANDS="${TMUX_MCP_MAX_COMMANDS:-1000}"
 COMMAND_TTL="${TMUX_MCP_COMMAND_TTL:-600}"
 
-# 颜色输出
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# 打印函数
+# Print functions
 info() { echo -e "${BLUE}[INFO]${NC} $1"; }
 success() { echo -e "${GREEN}[OK]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
-# 使用说明
+# Usage
 usage() {
     cat << 'EOF'
 Usage: ./install.sh [OPTIONS]
 
 Options:
-    -b, --binary PATH       使用已有的二进制文件路径，跳过源码构建
-    -s, --skip-build        跳过构建，假设二进制已在 ~/.local/bin/
-    -i, --install-dir DIR   安装目录 (默认: ~/.local/bin)
-    -c, --config-dir DIR    配置目录 (默认: ~/.config/tmux-mcp)
-    --bind ADDR             绑定地址 (默认: 127.0.0.1:8090)
-    --max-cmd N             最大命令数 (默认: 1000)
-    --ttl SECONDS           命令TTL秒数 (默认: 600)
-    -u, --uninstall         卸载服务
-    -h, --help              显示此帮助
+    -b, --binary PATH       Use existing binary path, skip source build
+    -s, --skip-build        Skip build, assume binary is in ~/.local/bin/
+    -i, --install-dir DIR   Install directory (default: ~/.local/bin)
+    -c, --config-dir DIR    Config directory (default: ~/.config/tmux-mcp)
+    --bind ADDR             Bind address (default: 127.0.0.1:8090)
+    --max-cmd N             Maximum commands (default: 1000)
+    --ttl SECONDS           Command TTL in seconds (default: 600)
+    -u, --uninstall         Uninstall service
+    -h, --help              Show this help
 
 Examples:
-    # 从源码构建并安装
+    # Build from source and install
     ./install.sh
 
-    # 使用已有的二进制文件
+    # Use an existing binary
     ./install.sh --binary ./target/release/tmux-mcp-server
 
-    # 二进制已在 ~/.local/bin/，只配置服务
+    # Binary already in ~/.local/bin/, configure service only
     ./install.sh --skip-build
 
-    # 自定义安装目录
+    # Custom install directory
     ./install.sh --install-dir /usr/local/bin
 
-    # 卸载
+    # Uninstall
     ./install.sh --uninstall
 
 EOF
 }
 
-# 检测平台
+# Detect platform
 detect_platform() {
     case "$(uname -s)" in
         Darwin*)
@@ -78,91 +78,94 @@ detect_platform() {
             if command -v systemctl &> /dev/null; then
                 SERVICE_TYPE="systemd"
             else
-                error "Linux 系统需要 systemd"
+                error "Linux systems require systemd"
                 exit 1
             fi
             ;;
         *)
-            error "不支持的操作系统: $(uname -s)"
+            error "Unsupported operating system: $(uname -s)"
             exit 1
             ;;
     esac
-    info "检测到平台: $PLATFORM ($SERVICE_TYPE)"
+    info "Detected platform: $PLATFORM ($SERVICE_TYPE)"
 }
 
-# 检查目录是否存在并创建
+# Check if directory exists and create
 ensure_dir() {
     if [ ! -d "$1" ]; then
         mkdir -p "$1"
-        success "创建目录: $1"
+        success "Created directory: $1"
     fi
 }
 
-# 检查依赖
+# Check dependencies
 check_dependencies() {
-    info "检查依赖..."
+    info "Checking dependencies..."
 
-    # 检查 tmux
+    # Check tmux
     if ! command -v tmux &> /dev/null; then
-        error "未找到 tmux，请先安装"
+        error "tmux not found, please install it first"
         exit 1
     fi
     success "tmux: $(tmux -V)"
 
-    # 如果需要构建，检查 Rust
+    # Check Rust if building from source
     if [ "$SKIP_BUILD" != "true" ] && [ -z "$BINARY_PATH" ]; then
         if ! command -v cargo &> /dev/null; then
-            error "未找到 Rust/Cargo，请先安装: https://rustup.rs/"
+            error "Rust/Cargo not found, please install: https://rustup.rs/"
             exit 1
         fi
         success "Rust: $(cargo --version)"
     fi
 }
 
-# 源码构建
+# Build from source
 build_from_source() {
-    info "从源码构建..."
+    info "Building from source..."
 
-    # 检查是否在项目目录
+    # Check if in project directory
     if [ ! -f "Cargo.toml" ]; then
-        error "未找到 Cargo.toml，请在项目根目录运行此脚本"
+        error "Cargo.toml not found, please run this script from the project root"
         exit 1
     fi
 
-    # 构建 release 版本
+    # Build release version
     cargo build --release
 
     if [ ! -f "target/release/$APP_NAME" ]; then
-        error "构建失败：未找到 target/release/$APP_NAME"
+        error "Build failed: target/release/$APP_NAME not found"
         exit 1
     fi
 
     BINARY_PATH="target/release/$APP_NAME"
-    success "构建完成: $BINARY_PATH"
+    success "Build completed: $BINARY_PATH"
 }
 
-# 安装二进制文件
+# Install binary
 install_binary() {
-    info "安装二进制文件..."
+    info "Installing binary..."
 
     local src="$1"
     local dst="$INSTALL_DIR/$APP_NAME"
 
-    # 如果源文件就是目标文件，跳过
+    # Skip if source is already the destination
     if [ "$src" = "$dst" ]; then
-        info "二进制已在目标位置，跳过复制"
+        info "Binary already in target location, skipping copy"
         return
     fi
 
-    # 复制并设置权限
+    # Copy and set permissions
     cp "$src" "$dst"
     chmod +x "$dst"
-    success "已安装: $dst"
+    success "Installed: $dst"
 }
 
-# 创建 systemd 用户服务 (Linux)
+# Create systemd user service (Linux)
 setup_systemd_service() {
-    info "配置 systemd 用户服务..."
+    info "Configuring systemd user service..."
+
+    # Ensure port is available first
+    ensure_port_available
 
     local service_dir="$HOME/.config/systemd/user"
     local service_file="$service_dir/$APP_NAME.service"
@@ -189,29 +192,74 @@ Environment="TMUX_MCP_COMMAND_TTL=$COMMAND_TTL"
 WantedBy=default.target
 EOF
 
-    success "创建服务文件: $service_file"
+    success "Created service file: $service_file"
 
-    # 重新加载 systemd
+    # Reload systemd
     systemctl --user daemon-reload
 
-    # 启用并启动服务
+    # Enable and start service
     systemctl --user enable "$APP_NAME.service"
     systemctl --user restart "$APP_NAME.service"
 
-    # 等待服务启动
+    # Wait for service to start
     sleep 2
 
     if systemctl --user is-active --quiet "$APP_NAME.service"; then
-        success "服务已启动并启用开机自启"
+        success "Service started and enabled for auto-start"
     else
-        error "服务启动失败，请检查日志: journalctl --user -u $APP_NAME"
+        error "Service failed to start, check logs: journalctl --user -u $APP_NAME"
         exit 1
     fi
 }
 
-# 创建 launchd 服务 (macOS)
+# Check and release port
+ensure_port_available() {
+    local port="${BIND_ADDR##*:}"
+    info "Checking if port $port is available..."
+
+    # Check port usage (get all PIDs)
+    local pids
+    pids=$(lsof -ti :"$port" 2>/dev/null | tr '\n' ' ' || true)
+
+    if [ -n "$pids" ]; then
+        warn "Port $port is in use by process: $pids"
+
+        # Try to stop launchd service
+        if launchctl list | grep -q "com.pittcat.$APP_NAME"; then
+            info "Stopping existing launchd service..."
+            launchctl stop "com.pittcat.$APP_NAME" 2>/dev/null || true
+            launchctl unload "$HOME/Library/LaunchAgents/com.pittcat.$APP_NAME.plist" 2>/dev/null || true
+            sleep 2
+        fi
+
+        # Check again
+        pids=$(lsof -ti :"$port" 2>/dev/null | tr '\n' ' ' || true)
+        if [ -n "$pids" ]; then
+            info "Force killing process: $pids..."
+            for pid in $pids; do
+                kill -9 "$pid" 2>/dev/null || true
+            done
+            sleep 2
+        fi
+
+        # Final check
+        if lsof -ti :"$port" >/dev/null 2>&1; then
+            error "Cannot release port $port, please check manually: lsof -i :$port"
+            exit 1
+        fi
+
+        success "Port $port released"
+    else
+        success "Port $port is free"
+    fi
+}
+
+# Create launchd service (macOS)
 setup_launchd_service() {
-    info "配置 launchd 服务..."
+    info "Configuring launchd service..."
+
+    # Ensure port is available first
+    ensure_port_available
 
     local plist_dir="$HOME/Library/LaunchAgents"
     local plist_file="$plist_dir/com.pittcat.$APP_NAME.plist"
@@ -257,27 +305,27 @@ setup_launchd_service() {
 </plist>
 EOF
 
-    success "创建 plist 文件: $plist_file"
+    success "Created plist file: $plist_file"
 
-    # 加载并启动服务
+    # Load and start service
     launchctl unload "$plist_file" 2>/dev/null || true
     launchctl load "$plist_file"
     launchctl start "com.pittcat.$APP_NAME" 2>/dev/null || true
 
-    # 等待服务启动
+    # Wait for service to start
     sleep 2
 
-    # 检查服务状态
+    # Check service status
     if launchctl list | grep -q "com.pittcat.$APP_NAME"; then
-        success "服务已启动并启用开机自启"
+        success "Service started and enabled for auto-start"
     else
-        warn "服务可能未启动，请手动检查: launchctl list | grep $APP_NAME"
+        warn "Service may not have started, please check manually: launchctl list | grep $APP_NAME"
     fi
 }
 
-# 配置服务
+# Setup service
 setup_service() {
-    info "配置开机自启服务..."
+    info "Configuring auto-start service..."
 
     case "$SERVICE_TYPE" in
         systemd)
@@ -289,9 +337,9 @@ setup_service() {
     esac
 }
 
-# 卸载服务
+# Uninstall service
 uninstall() {
-    info "卸载 $APP_NAME..."
+    info "Uninstalling $APP_NAME..."
 
     detect_platform
 
@@ -309,84 +357,100 @@ uninstall() {
             ;;
     esac
 
-    # 删除二进制
+    # Remove binary
     rm -f "$INSTALL_DIR/$APP_NAME"
 
-    # 询问是否删除配置和数据
-    read -p "是否删除配置和数据目录? [y/N] " -n 1 -r
+    # Ask whether to delete config and data
+    read -p "Delete config and data directories? [y/N] " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         rm -rf "$CONFIG_DIR" "$DATA_DIR"
-        success "已删除配置和数据"
+        success "Deleted config and data"
     fi
 
-    success "卸载完成"
+    success "Uninstall completed"
 }
 
-# 验证安装
+# Verify installation
 verify_installation() {
-    info "验证安装..."
+    info "Verifying installation..."
 
-    # 检查二进制
+    # Check binary
     if [ ! -x "$INSTALL_DIR/$APP_NAME" ]; then
-        error "二进制文件不存在或不可执行"
+        error "Binary file does not exist or is not executable"
         exit 1
     fi
 
-    # 检查版本
-    local version_output
-    version_output=$("$INSTALL_DIR/$APP_NAME" --version 2>&1 || echo "version not available")
-    info "版本: $version_output"
+    # Wait for service to be ready
+    sleep 2
 
-    # 等待服务就绪
-    sleep 1
+    # Test connection
+    local retry=0
+    local max_retry=5
+    local service_ready=false
 
-    # 测试连接
-    if curl -s "http://${BIND_ADDR}/mcp" > /dev/null 2>&1 || \
-       curl -s "http://${BIND_ADDR}/health" > /dev/null 2>&1 || \
-       curl -s "http://${BIND_ADDR}" > /dev/null 2>&1; then
-        success "服务响应正常"
+    while [ $retry -lt $max_retry ]; do
+        if curl -s "http://${BIND_ADDR}/mcp" > /dev/null 2>&1 || \
+           curl -s "http://${BIND_ADDR}/health" > /dev/null 2>&1 || \
+           curl -s "http://${BIND_ADDR}" > /dev/null 2>&1; then
+            service_ready=true
+            break
+        fi
+        retry=$((retry + 1))
+        info "Waiting for service to start... ($retry/$max_retry)"
+        sleep 1
+    done
+
+    if [ "$service_ready" = true ]; then
+        success "Service responding normally"
+        # Get tool count from tool list
+        local tools_count
+        tools_count=$(curl -s "http://${BIND_ADDR}/mcp/tools" 2>/dev/null | grep -o '"name"' | wc -l | tr -d ' ')
+        if [ -n "$tools_count" ] && [ "$tools_count" -gt 0 ]; then
+            info "Available tools count: $tools_count"
+        fi
     else
-        warn "服务可能还在启动中，请稍后手动检查"
+        warn "Service may still be starting, please check manually later"
+        warn "Check logs: tail -f $LOG_DIR/server.log"
     fi
 
-    success "安装验证完成!"
+    success "Installation verification completed!"
 }
 
-# 打印安装信息
+# Print installation info
 print_info() {
     echo
     echo "========================================"
-    echo "  Tmux MCP Server 安装完成!"
+    echo "  Tmux MCP Server Installation Complete!"
     echo "========================================"
     echo
-    echo "  安装路径: $INSTALL_DIR/$APP_NAME"
-    echo "  配置文件: $CONFIG_DIR/"
-    echo "  日志文件: $LOG_DIR/server.log"
-    echo "  服务地址: http://$BIND_ADDR"
+    echo "  Install path: $INSTALL_DIR/$APP_NAME"
+    echo "  Config file: $CONFIG_DIR/"
+    echo "  Log file: $LOG_DIR/server.log"
+    echo "  Service address: http://$BIND_ADDR"
     echo
-    echo "  常用命令:"
+    echo "  Common commands:"
     case "$SERVICE_TYPE" in
         systemd)
-            echo "    查看状态: systemctl --user status $APP_NAME"
-            echo "    查看日志: journalctl --user -u $APP_NAME -f"
-            echo "    重启服务: systemctl --user restart $APP_NAME"
-            echo "    停止服务: systemctl --user stop $APP_NAME"
+            echo "    Check status: systemctl --user status $APP_NAME"
+            echo "    View logs: journalctl --user -u $APP_NAME -f"
+            echo "    Restart service: systemctl --user restart $APP_NAME"
+            echo "    Stop service: systemctl --user stop $APP_NAME"
             ;;
         launchd)
-            echo "    查看状态: launchctl list | grep $APP_NAME"
-            echo "    查看日志: tail -f $LOG_DIR/server.log"
-            echo "    重启服务: launchctl stop com.pittcat.$APP_NAME; launchctl start com.pittcat.$APP_NAME"
-            echo "    停止服务: launchctl stop com.pittcat.$APP_NAME"
+            echo "    Check status: launchctl list | grep $APP_NAME"
+            echo "    View logs: tail -f $LOG_DIR/server.log"
+            echo "    Restart service: launchctl stop com.pittcat.$APP_NAME; launchctl start com.pittcat.$APP_NAME"
+            echo "    Stop service: launchctl stop com.pittcat.$APP_NAME"
             ;;
     esac
     echo
     echo "========================================"
 }
 
-# 主函数
+# Main function
 main() {
-    # 解析参数
+    # Parse arguments
     SKIP_BUILD="false"
     BINARY_PATH=""
     UNINSTALL_MODE="false"
@@ -430,65 +494,65 @@ main() {
                 exit 0
                 ;;
             *)
-                error "未知选项: $1"
+                error "Unknown option: $1"
                 usage
                 exit 1
                 ;;
         esac
     done
 
-    # 卸载模式
+    # Uninstall mode
     if [ "$UNINSTALL_MODE" = "true" ]; then
         uninstall
         exit 0
     fi
 
     echo "========================================"
-    echo "  Tmux MCP Server 安装脚本"
+    echo "  Tmux MCP Server Installation Script"
     echo "========================================"
     echo
 
-    # 检测平台
+    # Detect platform
     detect_platform
 
-    # 检查依赖
+    # Check dependencies
     check_dependencies
 
-    # 创建必要目录
+    # Create required directories
     ensure_dir "$INSTALL_DIR"
     ensure_dir "$CONFIG_DIR"
     ensure_dir "$LOG_DIR"
 
-    # 获取二进制文件
+    # Get binary file
     if [ -n "$BINARY_PATH" ]; then
-        # 使用指定的二进制文件
+        # Use specified binary file
         if [ ! -f "$BINARY_PATH" ]; then
-            error "指定的二进制文件不存在: $BINARY_PATH"
+            error "Specified binary file does not exist: $BINARY_PATH"
             exit 1
         fi
-        info "使用指定的二进制文件: $BINARY_PATH"
+        info "Using specified binary: $BINARY_PATH"
         install_binary "$BINARY_PATH"
     elif [ "$SKIP_BUILD" = "true" ]; then
-        # 跳过构建，检查是否已安装
+        # Skip build, check if already installed
         if [ ! -f "$INSTALL_DIR/$APP_NAME" ]; then
-            error "未找到已安装的二进制文件: $INSTALL_DIR/$APP_NAME"
-            info "请使用 --binary 指定二进制路径，或移除 --skip-build 从源码构建"
+            error "No installed binary found: $INSTALL_DIR/$APP_NAME"
+            info "Please use --binary to specify binary path, or remove --skip-build to build from source"
             exit 1
         fi
-        info "使用已安装的二进制文件"
+        info "Using already installed binary"
     else
-        # 从源码构建
+        # Build from source
         build_from_source
         install_binary "$BINARY_PATH"
     fi
 
-    # 配置服务
+    # Configure service
     setup_service
 
-    # 验证安装
+    # Verify installation
     verify_installation
 
-    # 打印信息
+    # Print info
     print_info
 }
 

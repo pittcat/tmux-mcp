@@ -22,28 +22,28 @@ Model Context Protocol server for interacting with tmux sessions over stateless 
 
 ## Quick Install (Recommended)
 
-使用提供的安装脚本一键安装并配置开机自启：
+One-click installation with auto-start service configuration using the provided install script:
 
 ```bash
-# 克隆仓库
+# Clone the repository
 git clone https://github.com/pittcat/tmux-mcp.git
 cd tmux-mcp
 
-# 从源码构建并安装（自动配置开机自启）
+# Build from source and install (auto-configures auto-start)
 ./install.sh
 
-# 或使用已有的二进制文件
+# Or use an existing binary
 ./install.sh --binary /path/to/tmux-mcp-server
 
-# 卸载
+# Uninstall
 ./install.sh --uninstall
 ```
 
-安装脚本支持：
-- **macOS**: 使用 `launchd` 用户级服务
-- **Linux**: 使用 `systemd` 用户级服务
-- 自动配置环境变量和日志轮转
-- 无需 root 权限（安装到 `~/.local/bin`）
+The install script supports:
+- **macOS**: Uses `launchd` user-level service
+- **Linux**: Uses `systemd` user-level service
+- Auto-configures environment variables and log rotation
+- No root required (installs to `~/.local/bin`)
 
 ## Building
 
@@ -76,80 +76,80 @@ TMUX_MCP_MAX_COMMANDS=500 TMUX_MCP_COMMAND_TTL=300 cargo run --release
 ### Install Script Options
 
 ```bash
-# 从源码构建并安装（默认）
+# Build from source and install (default)
 ./install.sh
 
-# 使用已有的二进制文件
+# Use an existing binary
 ./install.sh --binary ./target/release/tmux-mcp-server
 
-# 二进制已手动复制到 ~/.local/bin，只配置服务
+# Binary already copied to ~/.local/bin, configure service only
 ./install.sh --skip-build
 
-# 自定义安装目录
+# Custom install directory
 ./install.sh --install-dir /usr/local/bin
 
-# 自定义绑定地址和配置
+# Custom bind address and configuration
 ./install.sh --bind 127.0.0.1:3000 --max-cmd 500 --ttl 300
 
-# 显示帮助
+# Show help
 ./install.sh --help
 ```
 
-| 选项 | 说明 |
+| Option | Description |
 |------|------|
-| `-b, --binary PATH` | 使用已有的二进制文件路径，跳过构建 |
-| `-s, --skip-build` | 跳过构建，假设二进制已在安装目录 |
-| `-i, --install-dir DIR` | 安装目录 (默认: `~/.local/bin`) |
-| `--bind ADDR` | 绑定地址 (默认: `127.0.0.1:8090`) |
-| `--max-cmd N` | 最大命令数 (默认: `1000`) |
-| `--ttl SECONDS` | 命令TTL秒数 (默认: `600`) |
-| `-u, --uninstall` | 卸载服务和二进制 |
+| `-b, --binary PATH` | Use existing binary path, skip build |
+| `-s, --skip-build` | Skip build, assume binary is already in install directory |
+| `-i, --install-dir DIR` | Install directory (default: `~/.local/bin`) |
+| `--bind ADDR` | Bind address (default: `127.0.0.1:8090`) |
+| `--max-cmd N` | Maximum commands (default: `1000`) |
+| `--ttl SECONDS` | Command TTL in seconds (default: `600`) |
+| `-u, --uninstall` | Uninstall service and binary |
 
 ### Service Management
 
 **macOS (launchd):**
 ```bash
-# 查看状态
+# Check status
 launchctl list | grep tmux-mcp-server
 
-# 查看当前日志（按小时轮转）
+# View current logs (hourly rotation)
 tail -f ~/.local/share/tmux-mcp/logs/server.log
 
-# 查看所有日志文件
+# View all log files
 ls -la ~/.local/share/tmux-mcp/logs/
 
-# 重启服务
+# Restart service
 launchctl stop com.pittcat.tmux-mcp-server
 launchctl start com.pittcat.tmux-mcp-server
 
-# 停止服务
+# Stop service
 launchctl stop com.pittcat.tmux-mcp-server
 ```
 
 **Linux (systemd):**
 ```bash
-# 查看状态
+# Check status
 systemctl --user status tmux-mcp-server
 
-# 查看当前日志（按小时轮转）
+# View current logs (hourly rotation)
 tail -f ~/.local/share/tmux-mcp/logs/server.log
 
-# 查看所有日志文件
+# View all log files
 ls -la ~/.local/share/tmux-mcp/logs/
 
-# 重启服务
+# Restart service
 systemctl --user restart tmux-mcp-server
 
-# 停止服务
+# Stop service
 systemctl --user stop tmux-mcp-server
 ```
 
 ### Log Rotation
 
-日志自动按小时轮转，保留最近 4 小时的日志文件：
-- 日志目录：`~/.local/share/tmux-mcp/logs/`
-- 文件名格式：`server.log.YYYY-MM-DD-HH`
-- 自动清理：每 5 分钟检查一次，删除超过 4 小时的旧日志
+Logs are automatically rotated hourly, keeping the last 4 hours of log files:
+- Log directory: `~/.local/share/tmux-mcp/logs/`
+- Filename format: `server.log.YYYY-MM-DD-HH`
+- Auto cleanup: Checks every 5 minutes, deletes logs older than 4 hours
 
 ### Environment Variables
 
