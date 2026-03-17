@@ -19,6 +19,31 @@ Model Context Protocol server for interacting with tmux sessions over stateless 
 - Rust toolchain (1.75+)
 - tmux installed and running
 
+## Quick Install (Recommended)
+
+使用提供的安装脚本一键安装并配置开机自启：
+
+```bash
+# 克隆仓库
+git clone https://github.com/pittcat/tmux-mcp.git
+cd tmux-mcp
+
+# 从源码构建并安装（自动配置开机自启）
+./install.sh
+
+# 或使用已有的二进制文件
+./install.sh --binary /path/to/tmux-mcp-server
+
+# 卸载
+./install.sh --uninstall
+```
+
+安装脚本支持：
+- **macOS**: 使用 `launchd` 用户级服务
+- **Linux**: 使用 `systemd` 用户级服务
+- 自动配置环境变量和日志轮转
+- 无需 root 权限（安装到 `~/.local/bin`）
+
 ## Building
 
 ```bash
@@ -45,6 +70,71 @@ TMUX_MCP_BIND_ADDR=127.0.0.1:3000 cargo run --release
 
 # Configure command registry limits
 TMUX_MCP_MAX_COMMANDS=500 TMUX_MCP_COMMAND_TTL=300 cargo run --release
+```
+
+### Install Script Options
+
+```bash
+# 从源码构建并安装（默认）
+./install.sh
+
+# 使用已有的二进制文件
+./install.sh --binary ./target/release/tmux-mcp-server
+
+# 二进制已手动复制到 ~/.local/bin，只配置服务
+./install.sh --skip-build
+
+# 自定义安装目录
+./install.sh --install-dir /usr/local/bin
+
+# 自定义绑定地址和配置
+./install.sh --bind 127.0.0.1:3000 --max-cmd 500 --ttl 300
+
+# 显示帮助
+./install.sh --help
+```
+
+| 选项 | 说明 |
+|------|------|
+| `-b, --binary PATH` | 使用已有的二进制文件路径，跳过构建 |
+| `-s, --skip-build` | 跳过构建，假设二进制已在安装目录 |
+| `-i, --install-dir DIR` | 安装目录 (默认: `~/.local/bin`) |
+| `--bind ADDR` | 绑定地址 (默认: `127.0.0.1:8090`) |
+| `--max-cmd N` | 最大命令数 (默认: `1000`) |
+| `--ttl SECONDS` | 命令TTL秒数 (默认: `600`) |
+| `-u, --uninstall` | 卸载服务和二进制 |
+
+### Service Management
+
+**macOS (launchd):**
+```bash
+# 查看状态
+launchctl list | grep tmux-mcp-server
+
+# 查看日志
+tail -f ~/.local/share/tmux-mcp/logs/server.log
+
+# 重启服务
+launchctl stop com.pittcat.tmux-mcp-server
+launchctl start com.pittcat.tmux-mcp-server
+
+# 停止服务
+launchctl stop com.pittcat.tmux-mcp-server
+```
+
+**Linux (systemd):**
+```bash
+# 查看状态
+systemctl --user status tmux-mcp-server
+
+# 查看日志
+journalctl --user -u tmux-mcp-server -f
+
+# 重启服务
+systemctl --user restart tmux-mcp-server
+
+# 停止服务
+systemctl --user stop tmux-mcp-server
 ```
 
 ### Environment Variables
