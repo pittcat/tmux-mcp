@@ -384,15 +384,16 @@ verify_installation() {
     # Wait for service to be ready
     sleep 2
 
-    # Test connection
+    # Test connection with timeout
     local retry=0
-    local max_retry=5
+    local max_retry=10
     local service_ready=false
 
     while [ $retry -lt $max_retry ]; do
-        if curl -s "http://${BIND_ADDR}/mcp" > /dev/null 2>&1 || \
-           curl -s "http://${BIND_ADDR}/health" > /dev/null 2>&1 || \
-           curl -s "http://${BIND_ADDR}" > /dev/null 2>&1; then
+        # Use timeout to prevent hanging
+        if timeout 2 curl -s "http://${BIND_ADDR}/mcp" > /dev/null 2>&1 || \
+           timeout 2 curl -s "http://${BIND_ADDR}/health" > /dev/null 2>&1 || \
+           timeout 2 curl -s "http://${BIND_ADDR}" > /dev/null 2>&1; then
             service_ready=true
             break
         fi
@@ -405,7 +406,7 @@ verify_installation() {
         success "Service responding normally"
         # Get tool count from tool list
         local tools_count
-        tools_count=$(curl -s "http://${BIND_ADDR}/mcp/tools" 2>/dev/null | grep -o '"name"' | wc -l | tr -d ' ')
+        tools_count=$(timeout 2 curl -s "http://${BIND_ADDR}/mcp/tools" 2>/dev/null | grep -o '"name"' | wc -l | tr -d ' ')
         if [ -n "$tools_count" ] && [ "$tools_count" -gt 0 ]; then
             info "Available tools count: $tools_count"
         fi
@@ -415,6 +416,28 @@ verify_installation() {
     fi
 
     success "Installation verification completed!"
+}
+
+# Print MCP server configuration JSON
+print_mcp_config() {
+    echo
+    echo "========================================"
+    echo "  MCP Server Configuration"
+    echo "========================================"
+    echo
+    echo "Add this to your MCP settings:"
+    echo
+    cat << EOF
+{
+  "mcpServers": {
+    "tmux": {
+      "type": "http",
+      "url": "http://${BIND_ADDR}/mcp"
+    }
+  }
+}
+EOF
+    echo
 }
 
 # Print installation info
@@ -446,6 +469,9 @@ print_info() {
     esac
     echo
     echo "========================================"
+
+    # Print MCP configuration
+    print_mcp_config
 }
 
 # Main function
