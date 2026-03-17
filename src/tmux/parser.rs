@@ -75,6 +75,26 @@ pub fn parse_panes(output: &str, window_id: &str) -> Vec<TmuxPane> {
         .collect()
 }
 
+pub fn parse_pane(output: &str) -> Result<TmuxPane> {
+    output
+        .lines()
+        .filter(|line| !line.is_empty())
+        .find_map(|line| {
+            let parts: Vec<&str> = line.split(':').collect();
+            if parts.len() >= 4 {
+                Some(TmuxPane {
+                    id: parts[0].to_string(),
+                    title: parts[1].to_string(),
+                    active: parts[2] == "1",
+                    window_id: parts[3].to_string(),
+                })
+            } else {
+                None
+            }
+        })
+        .ok_or_else(|| TmuxMcpError::TmuxError("Failed to parse pane output".to_string()))
+}
+
 #[allow(dead_code)]
 pub fn parse_command_output(
     content: &str,
@@ -153,6 +173,16 @@ mod tests {
         assert_eq!(panes[0].id, "%0");
         assert_eq!(panes[0].title, "title1");
         assert!(panes[0].active);
+    }
+
+    #[test]
+    fn test_parse_pane_from_control_mode_output() {
+        let output = "%begin 1 2 1\n%4:title4:1:@2\n%end 1 2 1";
+        let pane = parse_pane(output).unwrap();
+        assert_eq!(pane.id, "%4");
+        assert_eq!(pane.title, "title4");
+        assert!(pane.active);
+        assert_eq!(pane.window_id, "@2");
     }
 
     #[test]

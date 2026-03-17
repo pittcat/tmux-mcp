@@ -38,7 +38,11 @@ async fn start_log_cleanup_task(log_file: PathBuf) {
                             .open(&log_file)
                             .await
                         {
-                            tracing::warn!("Failed to truncate log file {}: {}", log_file.display(), e);
+                            tracing::warn!(
+                                "Failed to truncate log file {}: {}",
+                                log_file.display(),
+                                e
+                            );
                         } else {
                             tracing::info!("Truncated log file: {}", log_file.display());
                         }
@@ -68,8 +72,7 @@ async fn main() -> anyhow::Result<()> {
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
 
     // Output to both file and console
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info"));
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     tracing_subscriber::registry()
         .with(env_filter)

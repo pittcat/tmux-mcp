@@ -137,23 +137,13 @@ pub fn split_pane(target_pane_id: &str, direction: &str, size: Option<u8>) -> Re
         .map(|s| format!(" -p {}", s))
         .unwrap_or_default();
 
-    execute_tmux(&format!(
-        "split-window {} -t '{}'{}",
+    let output = execute_tmux(&format!(
+        "split-window {} -P -F '#{{pane_id}}:#{{pane_title}}:#{{?pane_active,1,0}}:#{{window_id}}' -t '{}'{}",
         dir_flag,
         escape_target(target_pane_id),
         size_flag
     ))?;
-
-    let window_info = execute_tmux(&format!(
-        "display-message -p -t '{}' '#{{window_id}}'",
-        escape_target(target_pane_id)
-    ))?;
-
-    let panes = list_panes(&window_info)?;
-    panes
-        .into_iter()
-        .last()
-        .ok_or_else(|| TmuxMcpError::TmuxError("Failed to split pane".to_string()))
+    parser::parse_pane(&output)
 }
 
 pub fn send_keys(pane_id: &str, keys: &str, is_special: bool) -> Result<()> {
