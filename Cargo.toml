@@ -1,0 +1,61 @@
+[package]
+name = "tmux-mcp-server"
+version = "0.1.0"
+edition = "2021"
+authors = ["tmux-mcp contributors"]
+description = "MCP server for tmux session management via HTTP"
+license = "MIT"
+
+[lib]
+name = "tmux_mcp_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "tmux-mcp-server"
+path = "src/main.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+tokio-stream = "0.1"
+
+# HTTP framework
+axum = { version = "0.7", features = ["macros"] }
+tower = { version = "0.4", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+hyper = { version = "1.0", features = ["full"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Configuration
+config = "0.14"
+
+# UUID generation
+uuid = { version = "1.6", features = ["v4", "serde"] }
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# HTTP client (for testing)
+reqwest = { version = "0.11", features = ["json"], optional = true }
+
+[dev-dependencies]
+reqwest = { version = "0.11", features = ["json"] }
+criterion = { version = "0.5", features = ["async_tokio"] }
+tempfile = "3.8"
+futures = "0.3"
+
+[[bench]]
+name = "memory_profile"
+harness = false
