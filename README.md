@@ -13,7 +13,7 @@ Model Context Protocol server for interacting with tmux sessions over stateless 
 - Kill tmux sessions, windows, and panes
 - Shared HTTP MCP server supporting 50+ concurrent clients
 - Bounded command state storage with TTL cleanup
-- Automatic log rotation (hourly) with 4-hour retention
+- Fixed `server.log` file with 4-hour retention
 
 ## Prerequisites
 
@@ -42,7 +42,7 @@ cd tmux-mcp
 The install script supports:
 - **macOS**: Uses `launchd` user-level service
 - **Linux**: Uses `systemd` user-level service
-- Auto-configures environment variables and log rotation
+- Auto-configures environment variables and log retention
 - No root required (installs to `~/.local/bin`)
 
 ## Building
@@ -112,10 +112,10 @@ TMUX_MCP_MAX_COMMANDS=500 TMUX_MCP_COMMAND_TTL=300 cargo run --release
 # Check status
 launchctl list | grep tmux-mcp-server
 
-# View current logs (hourly rotation)
+# View current logs
 tail -f ~/.local/share/tmux-mcp/logs/server.log
 
-# View all log files
+# View log directory
 ls -la ~/.local/share/tmux-mcp/logs/
 
 # Restart service
@@ -131,10 +131,10 @@ launchctl stop com.pittcat.tmux-mcp-server
 # Check status
 systemctl --user status tmux-mcp-server
 
-# View current logs (hourly rotation)
+# View current logs
 tail -f ~/.local/share/tmux-mcp/logs/server.log
 
-# View all log files
+# View log directory
 ls -la ~/.local/share/tmux-mcp/logs/
 
 # Restart service
@@ -144,12 +144,12 @@ systemctl --user restart tmux-mcp-server
 systemctl --user stop tmux-mcp-server
 ```
 
-### Log Rotation
+### Log Retention
 
-Logs are automatically rotated hourly, keeping the last 4 hours of log files:
+Logs are written to a fixed file and pruned hourly to keep only the last 4 hours of log entries:
 - Log directory: `~/.local/share/tmux-mcp/logs/`
-- Filename format: `server.log.YYYY-MM-DD-HH`
-- Auto cleanup: Checks every 5 minutes, deletes logs older than 4 hours
+- Filename: `server.log`
+- Auto cleanup: Checks every hour and removes log entries older than 4 hours
 
 ### Environment Variables
 

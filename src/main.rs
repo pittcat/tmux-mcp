@@ -20,14 +20,9 @@ mod transport;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // Get log directory
     let log_dir = logging::default_log_dir();
-
-    // Initialize logging with hourly rotation
-    let _guard = logging::init_logging(log_dir.clone(), true);
-
-    // Start log cleanup task for 4-hour retention
-    logging::start_log_cleanup_task(log_dir);
+    let logging_guard = logging::init_logging(log_dir, true);
+    logging::start_log_cleanup_task(logging_guard.cleanup_state());
 
     let config = Config::from_env()?;
     info!("Starting tmux-mcp-server on {}", config.bind_addr);
@@ -60,9 +55,7 @@ async fn main() -> anyhow::Result<()> {
         .await?;
 
     info!("Server shutdown complete");
-
-    // Ensure log guard lives until program end to flush all logs
-    drop(_guard);
+    drop(logging_guard);
 
     Ok(())
 }
