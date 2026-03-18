@@ -270,7 +270,7 @@ pub async fn call_tool(
 }
 
 async fn handle_list_sessions() -> Result<serde_json::Value> {
-    let sessions = service::list_sessions()?;
+    let sessions = service::list_sessions().await?;
     Ok(json!({
         "content": [{
             "type": "text",
@@ -284,7 +284,7 @@ async fn handle_find_session(params: serde_json::Value) -> Result<serde_json::Va
         .as_str()
         .ok_or_else(|| TmuxMcpError::InvalidParameter("name required".to_string()))?;
 
-    let session = service::find_session_by_name(name)?;
+    let session = service::find_session_by_name(name).await?;
     let text = match session {
         Some(s) => serde_json::to_string_pretty(&s)?,
         None => format!("Session not found: {}", name),
@@ -300,7 +300,7 @@ async fn handle_list_windows(params: serde_json::Value) -> Result<serde_json::Va
         .as_str()
         .ok_or_else(|| TmuxMcpError::InvalidParameter("sessionId required".to_string()))?;
 
-    let windows = service::list_windows(session_id)?;
+    let windows = service::list_windows(session_id).await?;
     Ok(json!({
         "content": [{
             "type": "text",
@@ -314,7 +314,7 @@ async fn handle_list_panes(params: serde_json::Value) -> Result<serde_json::Valu
         .as_str()
         .ok_or_else(|| TmuxMcpError::InvalidParameter("windowId required".to_string()))?;
 
-    let panes = service::list_panes(window_id)?;
+    let panes = service::list_panes(window_id).await?;
     Ok(json!({
         "content": [{
             "type": "text",
@@ -332,7 +332,7 @@ async fn handle_capture_pane(params: serde_json::Value) -> Result<serde_json::Va
 
     let colors = params["colors"].as_bool().unwrap_or(false);
 
-    let content = service::capture_pane_content(pane_id, lines, colors)?;
+    let content = service::capture_pane_content(pane_id, lines, colors).await?;
     Ok(json!({
         "content": [{
             "type": "text",
@@ -346,7 +346,7 @@ async fn handle_create_session(params: serde_json::Value) -> Result<serde_json::
         .as_str()
         .ok_or_else(|| TmuxMcpError::InvalidParameter("name required".to_string()))?;
 
-    let session = service::create_session(name)?;
+    let session = service::create_session(name).await?;
     Ok(json!({
         "content": [{
             "type": "text",
@@ -364,7 +364,7 @@ async fn handle_create_window(params: serde_json::Value) -> Result<serde_json::V
         .as_str()
         .ok_or_else(|| TmuxMcpError::InvalidParameter("name required".to_string()))?;
 
-    let window = service::create_window(session_id, name)?;
+    let window = service::create_window(session_id, name).await?;
     Ok(json!({
         "content": [{
             "type": "text",
@@ -378,7 +378,7 @@ async fn handle_kill_session(params: serde_json::Value) -> Result<serde_json::Va
         .as_str()
         .ok_or_else(|| TmuxMcpError::InvalidParameter("sessionId required".to_string()))?;
 
-    service::kill_session(session_id)?;
+    service::kill_session(session_id).await?;
     Ok(json!({
         "content": [{
             "type": "text",
@@ -392,7 +392,7 @@ async fn handle_kill_window(params: serde_json::Value) -> Result<serde_json::Val
         .as_str()
         .ok_or_else(|| TmuxMcpError::InvalidParameter("windowId required".to_string()))?;
 
-    service::kill_window(window_id)?;
+    service::kill_window(window_id).await?;
     Ok(json!({
         "content": [{
             "type": "text",
@@ -406,7 +406,7 @@ async fn handle_kill_pane(params: serde_json::Value) -> Result<serde_json::Value
         .as_str()
         .ok_or_else(|| TmuxMcpError::InvalidParameter("paneId required".to_string()))?;
 
-    service::kill_pane(pane_id)?;
+    service::kill_pane(pane_id).await?;
     Ok(json!({
         "content": [{
             "type": "text",
@@ -424,7 +424,7 @@ async fn handle_split_pane(params: serde_json::Value) -> Result<serde_json::Valu
 
     let size = params["size"].as_u64().map(|s| s as u8);
 
-    let pane = service::split_pane(pane_id, direction, size)?;
+    let pane = service::split_pane(pane_id, direction, size).await?;
     Ok(json!({
         "content": [{
             "type": "text",

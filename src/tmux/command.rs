@@ -38,9 +38,9 @@ pub async fn execute_command(
             "F9", "F10", "F11", "F12",
         ];
         let is_special = special_keys.contains(&command.as_str());
-        service::send_keys(&pane_id, &command, is_special)?;
+        service::send_keys(&pane_id, &command, is_special).await?;
     } else if raw_mode {
-        service::send_keys_enter(&pane_id, &command)?;
+        service::send_keys_enter(&pane_id, &command).await?;
     } else {
         let start_marker = "TMUX_MCP_START";
         let end_marker = service::get_end_marker_text(shell_type);
@@ -48,7 +48,7 @@ pub async fn execute_command(
             "echo \"{}\"; {}; echo \"{}\"",
             start_marker, command, end_marker
         );
-        service::send_keys_enter(&pane_id, &full_command)?;
+        service::send_keys_enter(&pane_id, &full_command).await?;
     }
 
     Ok(command_id)
@@ -75,7 +75,8 @@ pub async fn check_command_status(
         return Ok(Some(execution));
     }
 
-    let content = service::capture_pane_content(&execution.pane_id, Some(1000), false)?;
+    let content: String =
+        service::capture_pane_content(&execution.pane_id, Some(1000), false).await?;
 
     let start_marker = "TMUX_MCP_START";
     let end_marker_prefix = "TMUX_MCP_DONE_";

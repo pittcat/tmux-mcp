@@ -519,7 +519,7 @@ async fn handle_tools_call(
 
     // Delegate to existing tools implementation
     match tool_name {
-        "list-sessions" => match crate::tmux::service::list_sessions() {
+        "list-sessions" => match crate::tmux::service::list_sessions().await {
             Ok(sessions) => Ok(json!({
                 "content": [{
                     "type": "text",
@@ -541,7 +541,7 @@ async fn handle_tools_call(
                     message: "Missing name parameter".to_string(),
                     data: None,
                 })?;
-            match crate::tmux::service::find_session_by_name(name) {
+            match crate::tmux::service::find_session_by_name(name).await {
                 Ok(session) => {
                     let text = match session {
                         Some(s) => serde_json::to_string_pretty(&s).unwrap_or_default(),
@@ -565,7 +565,7 @@ async fn handle_tools_call(
                     message: "Missing sessionId parameter".to_string(),
                     data: None,
                 })?;
-            match crate::tmux::service::list_windows(session_id) {
+            match crate::tmux::service::list_windows(session_id).await {
                 Ok(windows) => Ok(json!({
                     "content": [{
                         "type": "text",
@@ -588,7 +588,7 @@ async fn handle_tools_call(
                     message: "Missing windowId parameter".to_string(),
                     data: None,
                 })?;
-            match crate::tmux::service::list_panes(window_id) {
+            match crate::tmux::service::list_panes(window_id).await {
                 Ok(panes) => Ok(json!({
                     "content": [{
                         "type": "text",
@@ -619,7 +619,7 @@ async fn handle_tools_call(
                 .get("colors")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
-            match crate::tmux::service::capture_pane_content(pane_id, lines, colors) {
+            match crate::tmux::service::capture_pane_content(pane_id, lines, colors).await {
                 Ok(content) => Ok(json!({
                     "content": [{ "type": "text", "text": content }]
                 })),
@@ -639,7 +639,7 @@ async fn handle_tools_call(
                     message: "Missing name parameter".to_string(),
                     data: None,
                 })?;
-            match crate::tmux::service::create_session(name) {
+            match crate::tmux::service::create_session(name).await {
                 Ok(session) => Ok(json!({
                     "content": [{
                         "type": "text",
@@ -670,7 +670,7 @@ async fn handle_tools_call(
                     message: "Missing name parameter".to_string(),
                     data: None,
                 })?;
-            match crate::tmux::service::create_window(session_id, name) {
+            match crate::tmux::service::create_window(session_id, name).await {
                 Ok(window) => Ok(json!({
                     "content": [{
                         "type": "text",
@@ -693,7 +693,7 @@ async fn handle_tools_call(
                     message: "Missing sessionId parameter".to_string(),
                     data: None,
                 })?;
-            match crate::tmux::service::kill_session(session_id) {
+            match crate::tmux::service::kill_session(session_id).await {
                 Ok(_) => Ok(json!({
                     "content": [{ "type": "text", "text": format!("Session {} has been killed", session_id) }]
                 })),
@@ -713,7 +713,7 @@ async fn handle_tools_call(
                     message: "Missing windowId parameter".to_string(),
                     data: None,
                 })?;
-            match crate::tmux::service::kill_window(window_id) {
+            match crate::tmux::service::kill_window(window_id).await {
                 Ok(_) => Ok(json!({
                     "content": [{ "type": "text", "text": format!("Window {} has been killed", window_id) }]
                 })),
@@ -733,7 +733,7 @@ async fn handle_tools_call(
                     message: "Missing paneId parameter".to_string(),
                     data: None,
                 })?;
-            match crate::tmux::service::kill_pane(pane_id) {
+            match crate::tmux::service::kill_pane(pane_id).await {
                 Ok(_) => Ok(json!({
                     "content": [{ "type": "text", "text": format!("Pane {} has been killed", pane_id) }]
                 })),
@@ -761,7 +761,7 @@ async fn handle_tools_call(
                 .get("size")
                 .and_then(|v| v.as_u64())
                 .map(|v| v as u8);
-            match crate::tmux::service::split_pane(pane_id, direction, size) {
+            match crate::tmux::service::split_pane(pane_id, direction, size).await {
                 Ok(pane) => Ok(json!({
                     "content": [{
                         "type": "text",
@@ -932,7 +932,7 @@ async fn handle_resources_read(
 
     // Parse resource URI
     if uri.starts_with("tmux://sessions") {
-        match crate::tmux::service::list_sessions() {
+        match crate::tmux::service::list_sessions().await {
             Ok(sessions) => Ok(json!({
                 "contents": [{
                     "uri": uri,

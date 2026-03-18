@@ -29,11 +29,11 @@ pub async fn list_resources(
     });
 
     // Add pane resources
-    if let Ok(sessions) = service::list_sessions() {
+    if let Ok(sessions) = service::list_sessions().await {
         for session in sessions {
-            if let Ok(windows) = service::list_windows(&session.id) {
+            if let Ok(windows) = service::list_windows(&session.id).await {
                 for window in windows {
-                    if let Ok(panes) = service::list_panes(&window.id) {
+                    if let Ok(panes) = service::list_panes(&window.id).await {
                         for pane in panes {
                             resources.push(Resource {
                                 name: format!(
@@ -101,7 +101,7 @@ pub async fn read_resource(
 }
 
 async fn handle_read_sessions() -> Result<serde_json::Value> {
-    let sessions = service::list_sessions()?;
+    let sessions = service::list_sessions().await?;
     let session_data: Vec<_> = sessions
         .into_iter()
         .map(|s| {
@@ -123,7 +123,7 @@ async fn handle_read_sessions() -> Result<serde_json::Value> {
 }
 
 async fn handle_read_pane(pane_id: &str) -> Result<serde_json::Value> {
-    let content = service::capture_pane_content(pane_id, Some(200), false)?;
+    let content = service::capture_pane_content(pane_id, Some(200), false).await?;
 
     Ok(json!({
         "contents": [{
