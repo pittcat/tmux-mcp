@@ -8,6 +8,9 @@ pub enum TmuxMcpError {
     #[error("tmux command failed: {0}")]
     TmuxError(String),
 
+    #[error("tmux command timed out after {0} seconds")]
+    TmuxTimeout(u64),
+
     #[error("tmux not found or not running")]
     TmuxNotAvailable,
 
@@ -47,7 +50,9 @@ impl IntoResponse for TmuxMcpError {
             | TmuxMcpError::WindowNotFound(_)
             | TmuxMcpError::PaneNotFound(_)
             | TmuxMcpError::CommandNotFound(_) => (StatusCode::NOT_FOUND, self.to_string()),
-            TmuxMcpError::InvalidParameter(_) => (StatusCode::BAD_REQUEST, self.to_string()),
+            TmuxMcpError::InvalidParameter(_) | TmuxMcpError::TmuxTimeout(_) => {
+                (StatusCode::BAD_REQUEST, self.to_string())
+            }
             _ => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Internal server error".to_string(),
