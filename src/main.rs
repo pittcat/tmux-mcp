@@ -1,89 +1,33 @@
 use std::net::SocketAddr;
-use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
 
 use axum::routing::{get, post};
 use axum::Router;
 use tokio::net::TcpListener;
 use tokio::signal;
 use tracing::info;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use crate::config::Config;
 use crate::state::command_registry::CommandRegistry;
 
 mod config;
 mod error;
+mod logging;
 mod mcp;
 mod state;
 mod tmux;
 mod transport;
 
-/// Start log truncation task, clears log file content periodically
-async fn start_log_cleanup_task(log_file: PathBuf) {
-    tokio::spawn(async move {
-        let cleanup_interval = Duration::from_secs(3600); // Check every hour
-        let max_size = 10 * 1024 * 1024; // 10 MB size threshold
-
-        loop {
-            tokio::time::sleep(cleanup_interval).await;
-
-            match tokio::fs::metadata(&log_file).await {
-                Ok(metadata) => {
-                    if metadata.len() > max_size {
-                        if let Err(e) = tokio::fs::OpenOptions::new()
-                            .write(true)
-                            .truncate(true)
-                            .open(&log_file)
-                            .await
-                        {
-                            tracing::warn!(
-                                "Failed to truncate log file {}: {}",
-                                log_file.display(),
-                                e
-                            );
-                        } else {
-                            tracing::info!("Truncated log file: {}", log_file.display());
-                        }
-                    }
-                }
-                Err(e) => {
-                    tracing::debug!("Log file not found: {}: {}", log_file.display(), e);
-                }
-            }
-        }
-    });
-}
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // Get log directory
-    let log_dir = dirs::data_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("tmux-mcp")
-        .join("logs");
+    let log_dir = logging::default_log_dir();
 
-    std::fs::create_dir_all(&log_dir)?;
+    // Initialize logging with hourly rotation
+    let _guard = logging::init_logging(log_dir.clone(), true);
 
-    // Use fixed log file (no rotation)
-    let log_file = log_dir.join("server.log");
-    let file_appender = tracing_appender::rolling::never(&log_dir, "server.log");
-    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
-
-    // Output to both file and console
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-
-    tracing_subscriber::registry()
-        .with(env_filter)
-        .with(
-            tracing_subscriber::fmt::layer()
-                .with_writer(non_blocking)
-                .with_ansi(false)
-                .with_target(false),
-        )
-        .with(tracing_subscriber::fmt::layer().with_ansi(true))
-        .init();
+    // Start log cleanup task for 4-hour retention
+    logging::start_log_cleanup_task(log_dir);
 
     let config = Config::from_env()?;
     info!("Starting tmux-mcp-server on {}", config.bind_addr);
@@ -104,9 +48,6 @@ async fn main() -> anyhow::Result<()> {
             }
         }
     });
-
-    // Start log truncation task
-    start_log_cleanup_task(log_file).await;
 
     let app = create_router(command_registry);
 
