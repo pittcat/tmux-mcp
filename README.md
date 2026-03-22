@@ -113,10 +113,10 @@ TMUX_MCP_MAX_COMMANDS=500 TMUX_MCP_COMMAND_TTL=300 cargo run --release
 launchctl list | grep tmux-mcp-server
 
 # View current logs
-tail -f ~/.local/share/tmux-mcp/logs/server.log
+tail -f "$HOME/Library/Application Support/tmux-mcp/logs/server.log"
 
 # View log directory
-ls -la ~/.local/share/tmux-mcp/logs/
+ls -la "$HOME/Library/Application Support/tmux-mcp/logs/"
 
 # Restart service
 launchctl stop com.pittcat.tmux-mcp-server
@@ -147,7 +147,8 @@ systemctl --user stop tmux-mcp-server
 ### Log Retention
 
 Logs are written to a fixed file and pruned hourly to keep only the last 4 hours of log entries:
-- Log directory: `~/.local/share/tmux-mcp/logs/`
+- Log directory (macOS): `~/Library/Application Support/tmux-mcp/logs/`
+- Log directory (Linux): `~/.local/share/tmux-mcp/logs/`
 - Filename: `server.log`
 - Auto cleanup: Checks every hour and removes log entries older than 4 hours
 
