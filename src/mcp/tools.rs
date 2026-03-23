@@ -452,7 +452,10 @@ async fn handle_execute_command(
     let no_enter = params["noEnter"].as_bool().unwrap_or(false);
 
     // Shell type from environment or default
-    let shell_type = ShellType::Bash; // TODO: make configurable
+    let shell_type = std::env::var("TMUX_MCP_SHELL")
+        .ok()
+        .map(|s| ShellType::parse(&s))
+        .unwrap_or(ShellType::Bash);
 
     let command_id = command::execute_command(
         registry,
@@ -531,7 +534,11 @@ async fn handle_get_command_result(
                 )
             }
         }
-        None => format!("Command not found: {}", command_id),
+        None => {
+            let err = TmuxMcpError::CommandNotFound(command_id.to_string());
+            tracing::debug!("registry miss: {err}");
+            format!("Command not found: {}", command_id)
+        }
     };
 
     Ok(json!({

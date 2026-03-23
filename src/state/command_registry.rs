@@ -78,13 +78,11 @@ impl CommandRegistry {
         });
     }
 
-    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         let commands = self.commands.read().unwrap();
         commands.len()
     }
 
-    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         let commands = self.commands.read().unwrap();
         commands.is_empty()

@@ -23,18 +23,15 @@ pub enum TmuxMcpError {
     #[error("pane not found: {0}")]
     PaneNotFound(String),
 
-    #[allow(dead_code)]
     #[error("command not found: {0}")]
     CommandNotFound(String),
 
     #[error("invalid parameter: {0}")]
     InvalidParameter(String),
 
-    #[allow(dead_code)]
     #[error("command execution failed: {0}")]
     CommandExecutionError(String),
 
-    #[allow(dead_code)]
     #[error("internal error: {0}")]
     InternalError(String),
 
