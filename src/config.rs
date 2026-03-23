@@ -5,7 +5,6 @@ pub struct Config {
     pub bind_addr: String,
     pub max_commands: usize,
     pub command_ttl_seconds: u64,
-    #[allow(dead_code)]
     pub default_shell: String,
 }
 

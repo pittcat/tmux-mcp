@@ -95,7 +95,6 @@ pub fn parse_pane(output: &str) -> Result<TmuxPane> {
         .ok_or_else(|| TmuxMcpError::TmuxError("Failed to parse pane output".to_string()))
 }
 
-#[allow(dead_code)]
 pub fn parse_command_output(
     content: &str,
     start_marker: &str,

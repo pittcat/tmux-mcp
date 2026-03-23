@@ -58,16 +58,19 @@ pub async fn list_resources(
 
     // Add command resources
     registry.cleanup_expired();
-    for cmd in registry.list_active() {
-        resources.push(Resource {
-            name: format!(
-                "Command: {}{}",
-                &cmd.command[..cmd.command.len().min(30)],
-                if cmd.command.len() > 30 { "..." } else { "" }
-            ),
-            uri: format!("tmux://command/{}/result", cmd.id),
-            description: format!("Execution status: {:?}", cmd.status),
-        });
+    if !registry.is_empty() {
+        resources.reserve(registry.len());
+        for cmd in registry.list_active() {
+            resources.push(Resource {
+                name: format!(
+                    "Command: {}{}",
+                    &cmd.command[..cmd.command.len().min(30)],
+                    if cmd.command.len() > 30 { "..." } else { "" }
+                ),
+                uri: format!("tmux://command/{}/result", cmd.id),
+                description: format!("Execution status: {:?}", cmd.status),
+            });
+        }
     }
 
     AxumJson(json!({ "resources": resources }))

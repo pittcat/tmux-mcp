@@ -59,7 +59,7 @@ pub async fn execute_tmux_with_timeout(tmux_command: &str, timeout_secs: u64) ->
             if e.kind() == std::io::ErrorKind::NotFound {
                 Err(TmuxMcpError::TmuxNotAvailable)
             } else {
-                Err(TmuxMcpError::TmuxError(e.to_string()))
+                Err(TmuxMcpError::InternalError(e.to_string()))
             }
         }
         Err(_) => {
@@ -67,13 +67,6 @@ pub async fn execute_tmux_with_timeout(tmux_command: &str, timeout_secs: u64) ->
             Err(TmuxMcpError::TmuxTimeout(timeout_secs))
         }
     }
-}
-
-#[allow(dead_code)]
-pub async fn is_tmux_running() -> bool {
-    execute_tmux("list-sessions -F '#{session_name}'")
-        .await
-        .is_ok()
 }
 
 pub async fn list_sessions() -> Result<Vec<TmuxSession>> {

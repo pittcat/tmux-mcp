@@ -49,7 +49,6 @@ pub struct LogCleanupState {
 
 impl LogCleanupState {
     /// Creates a new cleanup state with the given log directory.
-    #[allow(dead_code)]
     pub fn new(log_dir: PathBuf) -> Self {
         Self::from_log_file(SynchronizedLogFile::new(log_file_path(&log_dir)))
     }
@@ -199,6 +198,10 @@ impl FormatTime for Rfc3339UtcTimer {
 pub fn init_logging(log_dir: PathBuf, enable_console: bool) -> LoggingGuard {
     fs::create_dir_all(&log_dir).expect("Failed to create log directory");
 
+    if let Err(err) = prune_expired_logs(log_dir.clone()) {
+        tracing::warn!("startup log prune failed: {err}");
+    }
+
     let log_file = SynchronizedLogFile::new(log_file_path(&log_dir));
     let cleanup_state = Arc::new(LogCleanupState::from_log_file(log_file.clone()));
     let file_writer = FixedFileMakeWriter::new(log_file);
@@ -260,7 +263,6 @@ pub fn start_log_cleanup_task(state: Arc<LogCleanupState>) {
 }
 
 /// Prune expired log lines from the fixed log file in `log_dir`.
-#[allow(dead_code)]
 pub fn prune_expired_logs(log_dir: PathBuf) -> io::Result<()> {
     let state = LogCleanupState::new(log_dir);
     cleanup_old_logs(&state)

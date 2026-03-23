@@ -6,6 +6,7 @@ use uuid::Uuid;
 use crate::error::Result;
 use crate::state::command_registry::CommandRegistry;
 use crate::tmux::models::{CommandExecution, CommandStatus, ShellType};
+use crate::tmux::parser;
 use crate::tmux::service;
 
 pub async fn execute_command(
@@ -81,53 +82,20 @@ pub async fn check_command_status(
     let start_marker = "TMUX_MCP_START";
     let end_marker_prefix = "TMUX_MCP_DONE_";
 
-    let start_index = match content.rfind(start_marker) {
-        Some(idx) => idx,
-        None => {
-            execution.result = Some("Command output could not be captured properly".to_string());
-            return Ok(Some(execution));
+    match parser::parse_command_output(&content, start_marker, end_marker_prefix) {
+        Ok((result, code)) => {
+            execution.status = if code == 0 {
+                CommandStatus::Completed
+            } else {
+                CommandStatus::Error
+            };
+            execution.exit_code = Some(code);
+            execution.result = Some(result);
+            registry.insert(command_id, execution.clone());
         }
-    };
-
-    let end_index = match content.rfind(end_marker_prefix) {
-        Some(idx) => idx,
-        None => {
+        Err(_) => {
             execution.result = Some("Command output could not be captured properly".to_string());
-            return Ok(Some(execution));
         }
-    };
-
-    if end_index <= start_index {
-        execution.result = Some("Command output could not be captured properly".to_string());
-        return Ok(Some(execution));
-    }
-
-    let end_line = &content[end_index..];
-    let end_line_end = end_line.find('\n').unwrap_or(end_line.len());
-    let end_marker_line = &end_line[..end_line_end];
-
-    let exit_code = end_marker_line
-        .strip_prefix(end_marker_prefix)
-        .and_then(|s| s.trim().parse().ok());
-
-    if let Some(code) = exit_code {
-        execution.status = if code == 0 {
-            CommandStatus::Completed
-        } else {
-            CommandStatus::Error
-        };
-        execution.exit_code = Some(code);
-
-        let output_start = start_index + start_marker.len();
-        let output_content = &content[output_start..end_index];
-        let result = output_content
-            .find('\n')
-            .map(|i| output_content[i + 1..].trim().to_string())
-            .unwrap_or_else(|| output_content.trim().to_string());
-
-        execution.result = Some(result);
-
-        registry.insert(command_id, execution.clone());
     }
 
     Ok(Some(execution))

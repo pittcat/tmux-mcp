@@ -54,7 +54,6 @@ pub enum ShellType {
 }
 
 impl ShellType {
-    #[allow(dead_code)]
     pub fn parse(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "zsh" => ShellType::Zsh,
