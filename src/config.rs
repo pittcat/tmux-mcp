@@ -5,7 +5,6 @@ pub struct Config {
     pub bind_addr: String,
     pub max_commands: usize,
     pub command_ttl_seconds: u64,
-    pub default_shell: String,
 }
 
 impl Config {
@@ -23,13 +22,10 @@ impl Config {
             .and_then(|s| s.parse().ok())
             .unwrap_or(600);
 
-        let default_shell = std::env::var("TMUX_MCP_SHELL").unwrap_or_else(|_| "bash".to_string());
-
         Ok(Config {
             bind_addr,
             max_commands,
             command_ttl_seconds,
-            default_shell,
         })
     }
 }
