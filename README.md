@@ -202,6 +202,22 @@ These routes are still exposed for compatibility and manual debugging, but they 
 - `execute-command` - Execute a command in a tmux pane
 - `get-command-result` - Get the result of an executed command
 
+## Reconnection Recovery
+
+The server implements reconnection recovery support for MCP clients:
+
+- **Stateless Design**: Server maintains no persistent connection state, allowing clients to reconnect freely
+- **SSE Keep-Alive**: GET /mcp endpoints send keep-alive comments every 30 seconds
+- **Auth Fallback**: When Claude encounters a failed state and clicks "Authenticate", the server returns a proper JSON response explaining that OAuth is not supported (instead of a 404 with empty body)
+
+### Recovery Endpoints
+
+The following endpoints handle recovery scenarios gracefully:
+
+- `/mcp/auth` - Returns JSON explaining OAuth is not supported
+- `/oauth` - Returns JSON explaining OAuth is not supported
+- `/authorize` - Returns JSON explaining OAuth is not supported
+
 ## Architecture
 
 This is a Rust-based HTTP MCP server with the following characteristics:
@@ -232,7 +248,22 @@ cargo test --test streamable_http
 cargo test --test multi_client_http
 cargo test --test command_registry_limits
 cargo test --test tmux_integration
+cargo test --test claude_reconnect_regression
 ```
+
+### Regression Testing
+
+The `claude_reconnect_regression` test suite verifies reconnection and auth fallback behavior:
+
+```bash
+# Run reconnect recovery tests
+cargo test --test claude_reconnect_regression
+
+# Run all tests including reconnect recovery
+cargo test --workspace
+```
+
+For manual end-to-end testing with Claude CLI, see `scripts/repro_claude_mcp_failed_state.sh`.
 
 ## License
 

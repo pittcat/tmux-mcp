@@ -202,6 +202,22 @@ systemctl --user stop tmux-mcp-server
 - `execute-command` - 在 tmux 窗格中执行命令
 - `get-command-result` - 获取执行命令的结果
 
+## 断连恢复
+
+服务器为 MCP 客户端实现了断连恢复支持：
+
+- **无状态设计**：服务器不维护持久连接状态，允许多次自由重连
+- **SSE 保活**：GET /mcp 端点每 30 秒发送一次保活注释
+- **认证降级**：当 Claude 遇到失败状态并点击"认证"时，服务器返回正确的 JSON 响应说明不支持 OAuth（而不是返回 404 空体）
+
+### 恢复端点
+
+以下端点优雅地处理恢复场景：
+
+- `/mcp/auth` - 返回 JSON 说明不支持 OAuth
+- `/oauth` - 返回 JSON 说明不支持 OAuth
+- `/authorize` - 返回 JSON 说明不支持 OAuth
+
 ## 架构设计
 
 这是一个基于 Rust 的 HTTP MCP 服务器，具有以下特点：
@@ -232,7 +248,22 @@ cargo test --test streamable_http
 cargo test --test multi_client_http
 cargo test --test command_registry_limits
 cargo test --test tmux_integration
+cargo test --test claude_reconnect_regression
 ```
+
+### 回归测试
+
+`claude_reconnect_regression` 测试套件验证重连和认证降级行为：
+
+```bash
+# 运行重连恢复测试
+cargo test --test claude_reconnect_regression
+
+# 运行所有测试包括重连恢复
+cargo test --workspace
+```
+
+如需使用 Claude CLI 进行手动端到端测试，请参见 `scripts/repro_claude_mcp_failed_state.sh`。
 
 ## 许可证
 
