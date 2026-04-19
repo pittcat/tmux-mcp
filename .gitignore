@@ -4,7 +4,5 @@
 
 # Added by cargo
 /target
-
-  launchctl unload ~/Library/LaunchAgents/com.pittcat.tmux-mcp-server.plist
-
-  launchctl load ~/Library/LaunchAgents/com.pittcat.tmux-mcp-server.plist
+.ralph/
+.rust-analyzer.toml
