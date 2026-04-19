@@ -62,10 +62,8 @@ async fn main() -> anyhow::Result<()> {
 
 fn create_router(command_registry: Arc<CommandRegistry>) -> Router {
     Router::new()
-        // Standard MCP JSON-RPC 2.0 protocol endpoints
-        .merge(mcp::protocol::create_protocol_router(
-            command_registry.clone(),
-        ))
+        // HTTP transport layer with recovery and auth fallback support
+        .merge(transport::create_transport_router(command_registry.clone()))
         // Legacy REST API endpoints (for compatibility)
         .route("/mcp/tools", get(mcp::tools::list_tools))
         .route("/mcp/tools/:name", post(mcp::tools::call_tool))

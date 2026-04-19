@@ -3,13 +3,13 @@ use std::sync::Arc;
 use axum::Router;
 use reqwest::header::CONTENT_TYPE;
 use serde_json::json;
-use tmux_mcp_server::mcp::protocol;
 use tmux_mcp_server::state::command_registry::CommandRegistry;
+use tmux_mcp_server::transport;
 use tokio::net::TcpListener;
 
 async fn spawn_protocol_server() -> (String, tokio::task::JoinHandle<()>) {
     let registry = Arc::new(CommandRegistry::new(100, 600));
-    let app: Router = protocol::create_protocol_router(registry);
+    let app: Router = transport::create_transport_router(registry);
 
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -445,6 +445,87 @@ async fn sse_stream_contains_protocol_version_header() {
             .unwrap(),
         "2025-03-26"
     );
+
+    handle.abort();
+}
+
+#[tokio::test]
+async fn post_then_get_reconnection_path() {
+    // Test that POST /mcp followed by GET /mcp works (simulates reconnection)
+    let (base_url, handle) = spawn_protocol_server().await;
+    let client = reqwest::Client::new();
+
+    // First POST a request
+    let post_response = client
+        .post(format!("{}/mcp", base_url))
+        .header(CONTENT_TYPE, "application/json")
+        .header("MCP-Protocol-Version", "2025-03-26")
+        .json(&json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "ping",
+            "params": {}
+        }))
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(post_response.status(), reqwest::StatusCode::OK);
+
+    // Then GET SSE stream (reconnection path)
+    let get_response = client
+        .get(format!("{}/mcp", base_url))
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(get_response.status(), reqwest::StatusCode::OK);
+    let content_type = get_response
+        .headers()
+        .get(CONTENT_TYPE)
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert!(
+        content_type.starts_with("text/event-stream"),
+        "Expected text/event-stream, got {}",
+        content_type
+    );
+
+    handle.abort();
+}
+
+#[tokio::test]
+async fn multiple_initialize_requests_stateless() {
+    // Test that multiple initialize requests work (server is stateless)
+    let (base_url, handle) = spawn_protocol_server().await;
+    let client = reqwest::Client::new();
+
+    for i in 1..=3 {
+        let response = client
+            .post(format!("{}/mcp", base_url))
+            .header(CONTENT_TYPE, "application/json")
+            .json(&json!({
+                "jsonrpc": "2.0",
+                "id": i,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-11-05",
+                    "capabilities": {},
+                    "clientInfo": {
+                        "name": "test-client",
+                        "version": "0.1.0"
+                    }
+                }
+            }))
+            .send()
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), reqwest::StatusCode::OK);
+        let body: serde_json::Value = response.json().await.unwrap();
+        assert_eq!(body["result"]["protocolVersion"], "2025-03-26");
+    }
 
     handle.abort();
 }

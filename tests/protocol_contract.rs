@@ -1,7 +1,7 @@
 //! Tests for protocol helper functions and error branches
 
 use serde_json::json;
-use tmux_mcp_server::mcp::protocol::{JsonRpcError, JsonRpcMessage};
+use tmux_mcp_server::transport::http::{JsonRpcError, JsonRpcMessage, JsonRpcResponse};
 
 #[test]
 fn test_jsonrpc_version_constant() {
@@ -110,8 +110,6 @@ fn test_json_rpc_error_codes() {
 
 #[test]
 fn test_json_rpc_response_serialization() {
-    use tmux_mcp_server::mcp::protocol::JsonRpcResponse;
-
     let response = JsonRpcResponse {
         jsonrpc: "2.0".to_string(),
         id: serde_json::Value::Number(1.into()),

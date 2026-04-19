@@ -1,3 +1,4 @@
 // HTTP transport layer for MCP
-// The main server setup is in main.rs
-// This module can be extended for additional transport protocols
+pub mod http;
+
+pub use http::create_transport_router;

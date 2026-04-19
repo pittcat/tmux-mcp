@@ -66,27 +66,6 @@ fn test_custom_command_ttl() {
     env::remove_var("TMUX_MCP_COMMAND_TTL");
 }
 
-/// Test default shell
-#[test]
-fn test_default_shell() {
-    env::remove_var("TMUX_MCP_SHELL");
-
-    let config = tmux_mcp_server::config::Config::from_env().unwrap();
-    assert_eq!(config.default_shell, "bash");
-}
-
-/// Test custom shell from env var
-#[test]
-fn test_custom_shell() {
-    env::remove_var("TMUX_MCP_SHELL");
-    env::set_var("TMUX_MCP_SHELL", "zsh");
-
-    let config = tmux_mcp_server::config::Config::from_env().unwrap();
-    assert_eq!(config.default_shell, "zsh");
-
-    env::remove_var("TMUX_MCP_SHELL");
-}
-
 /// Test invalid max commands falls back to default
 #[test]
 fn test_invalid_max_commands_falls_back() {
@@ -118,22 +97,18 @@ fn test_all_env_vars_together() {
     env::remove_var("TMUX_MCP_BIND_ADDR");
     env::remove_var("TMUX_MCP_MAX_COMMANDS");
     env::remove_var("TMUX_MCP_COMMAND_TTL");
-    env::remove_var("TMUX_MCP_SHELL");
 
     // Now set them
     env::set_var("TMUX_MCP_BIND_ADDR", "192.168.1.1:9000");
     env::set_var("TMUX_MCP_MAX_COMMANDS", "2000");
     env::set_var("TMUX_MCP_COMMAND_TTL", "1200");
-    env::set_var("TMUX_MCP_SHELL", "fish");
 
     let config = tmux_mcp_server::config::Config::from_env().unwrap();
     assert_eq!(config.bind_addr, "192.168.1.1:9000");
     assert_eq!(config.max_commands, 2000);
     assert_eq!(config.command_ttl_seconds, 1200);
-    assert_eq!(config.default_shell, "fish");
 
     env::remove_var("TMUX_MCP_BIND_ADDR");
     env::remove_var("TMUX_MCP_MAX_COMMANDS");
     env::remove_var("TMUX_MCP_COMMAND_TTL");
-    env::remove_var("TMUX_MCP_SHELL");
 }
